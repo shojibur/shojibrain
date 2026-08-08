@@ -15,8 +15,8 @@ export function supportsLang(ext: string): boolean {
 }
 
 export function isTestFileLang(relativeFile: string): boolean {
-  return /(_test|\.test|_spec|\.spec)\.(py|php|rb|go)$/i.test(relativeFile) ||
-    /\/(tests?|spec)\//i.test(relativeFile);
+  return /(_test|\.test|_spec|\.spec|test|spec)\.(py|php|rb|go)$/i.test(relativeFile) ||
+    /(^|\/)(__tests__|tests?|spec|specs)(\/|$)/i.test(relativeFile);
 }
 
 export async function analyzeNonJsFile(

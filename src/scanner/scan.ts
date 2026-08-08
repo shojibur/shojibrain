@@ -123,7 +123,8 @@ async function buildProjectMap(
   const testDirectories = uniqueSorted(
     Object.entries(files)
       .filter(([, value]) => value.isTest)
-      .map(([file]) => file.split("/")[0] ?? "."),
+      .map(([file]) => inferTestDirectory(file))
+      .filter((value): value is string => Boolean(value)),
   );
   const languages = uniqueSorted(Object.values(files).map((entry) => entry.language));
 
@@ -585,34 +586,120 @@ function buildTestsMap(
   const testFiles = Object.entries(files).filter(([, entry]) => entry.isTest);
   const sourceFiles = Object.entries(files).filter(([, entry]) => !entry.isTest);
 
-  for (const [sourceFile] of sourceFiles) {
-    const matches = new Set<string>();
-    const sourceBase = stripTestSuffix(path.posix.basename(sourceFile, path.posix.extname(sourceFile)));
-    for (const [testFile] of testFiles) {
-      const imports = dependencyMap.get(testFile) ?? new Set<string>();
-      if (imports.has(sourceFile)) {
-        matches.add(testFile);
-        continue;
-      }
-      const testBase = stripTestSuffix(path.posix.basename(testFile, path.posix.extname(testFile)));
-      if (sourceBase === testBase) {
-        matches.add(testFile);
-      }
+  const matchedSourcesByTest = new Map<string, string[]>();
+  for (const [testFile, testEntry] of testFiles) {
+    const scoredSources = sourceFiles
+      .map(([sourceFile, sourceEntry]) => ({
+        sourceFile,
+        score: scoreTestRelation(sourceFile, sourceEntry.module, testFile, testEntry.module, dependencyMap),
+      }))
+      .filter((item) => item.score >= 4)
+      .sort((a, b) => b.score - a.score);
+
+    if (scoredSources.length === 0) {
+      continue;
     }
-    if (matches.size > 0) {
-      result[sourceFile] = Array.from(matches).sort();
+
+    const bestScore = scoredSources[0]?.score ?? 0;
+    const accepted = scoredSources
+      .filter((item) => item.score >= Math.max(4, bestScore - 1.5))
+      .slice(0, 3)
+      .map((item) => item.sourceFile);
+
+    matchedSourcesByTest.set(testFile, accepted);
+  }
+
+  for (const [sourceFile] of sourceFiles) {
+    const matches = Array.from(matchedSourcesByTest.entries())
+      .filter(([, sources]) => sources.includes(sourceFile))
+      .map(([testFile]) => testFile)
+      .sort();
+
+    if (matches.length > 0) {
+      result[sourceFile] = matches;
     }
   }
   return result;
 }
 
 function stripTestSuffix(value: string): string {
-  return value.replace(/\.(test|spec)$/i, "");
+  return value
+    .replace(/\.(test|spec)$/i, "")
+    .replace(/(_test|_spec|test|spec)$/i, "");
 }
 
 function isTestFile(relativeFile: string): boolean {
   return /\.(ts|tsx|js|jsx|mts|cts|mjs|cjs)$/i.test(relativeFile) &&
-    (relativeFile.includes(".test.") || relativeFile.includes(".spec.") || relativeFile.includes("/__tests__/"));
+    (
+      relativeFile.includes(".test.") ||
+      relativeFile.includes(".spec.") ||
+      /(^|\/)(__tests__|tests?|spec|specs)(\/|$)/i.test(relativeFile)
+    );
+}
+
+function inferTestDirectory(relativeFile: string): string | null {
+  const parts = toPosix(relativeFile).split("/");
+  const index = parts.findIndex((part) => /^(?:__tests__|tests?|spec|specs)$/i.test(part));
+  if (index === -1) {
+    return null;
+  }
+  return parts.slice(0, index + 1).join("/") || parts[index] || null;
+}
+
+function scoreTestRelation(
+  sourceFile: string,
+  sourceModule: string | null,
+  testFile: string,
+  testModule: string | null,
+  dependencyMap: Map<string, Set<string>>,
+): number {
+  let score = 0;
+  const imports = dependencyMap.get(testFile) ?? new Set<string>();
+  if (imports.has(sourceFile)) {
+    score += 10;
+  }
+
+  const sourceBase = stripTestSuffix(path.posix.basename(sourceFile, path.posix.extname(sourceFile)));
+  const testBase = stripTestSuffix(path.posix.basename(testFile, path.posix.extname(testFile)));
+  if (sourceBase.toLowerCase() === testBase.toLowerCase()) {
+    score += 8;
+  }
+
+  const sourceTokens = tokenizeForMatching(sourceFile);
+  const testTokens = tokenizeForMatching(testFile);
+  const overlap = countOverlap(sourceTokens, testTokens);
+  score += overlap * 1.5;
+
+  if (sourceModule && testModule && sourceModule === testModule) {
+    score += 2;
+  }
+
+  const sourceParent = path.posix.basename(path.posix.dirname(sourceFile)).toLowerCase();
+  if (testTokens.includes(sourceParent)) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function tokenizeForMatching(value: string): string[] {
+  const normalized = value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .toLowerCase();
+  return Array.from(
+    new Set(
+      normalized
+        .split(/[^a-z0-9]+/)
+        .map((part) => stripTestSuffix(part))
+        .filter((part) => part.length >= 2),
+    ),
+  );
+}
+
+function countOverlap(source: string[], test: string[]): number {
+  const testSet = new Set(test);
+  return source.reduce((count, token) => count + (testSet.has(token) ? 1 : 0), 0);
 }
 
 function inferModuleName(relativeFile: string): string | null {

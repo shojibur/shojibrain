@@ -14,8 +14,8 @@ function supportsLang(ext) {
     return exports.LANG_EXTENSIONS.has(ext.toLowerCase());
 }
 function isTestFileLang(relativeFile) {
-    return /(_test|\.test|_spec|\.spec)\.(py|php|rb|go)$/i.test(relativeFile) ||
-        /\/(tests?|spec)\//i.test(relativeFile);
+    return /(_test|\.test|_spec|\.spec|test|spec)\.(py|php|rb|go)$/i.test(relativeFile) ||
+        /(^|\/)(__tests__|tests?|spec|specs)(\/|$)/i.test(relativeFile);
 }
 async function analyzeNonJsFile(relativeFile, rootDir) {
     const ext = node_path_1.default.extname(relativeFile).toLowerCase();
