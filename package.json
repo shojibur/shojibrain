@@ -11,7 +11,6 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/index.ts",
-    "prepare": "npm run build",
     "test": "npm run check"
   },
   "keywords": [
@@ -22,6 +21,14 @@
   ],
   "author": "",
   "license": "ISC",
+  "files": [
+    "dist",
+    "src",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "README.md"
+  ],
   "dependencies": {
     "@babel/parser": "^8.0.4",
     "@babel/traverse": "^8.0.4",
