@@ -128,6 +128,13 @@ Refresh maps after changes:
 shojibrain sync
 ```
 
+Update `CURRENT.md` from local git history:
+
+```bash
+shojibrain checkpoint --dry-run
+shojibrain checkpoint
+```
+
 ## What `init` Creates
 
 Inside the target project, ShojiBrain creates:
@@ -278,6 +285,10 @@ Current behavior in V0.1:
 ### `shojibrain watch`
 
 Watches relevant source files plus ShojiBrain docs/config and automatically refreshes the generated maps after changes.
+
+### `shojibrain checkpoint`
+
+Generates a deterministic local update for `.shojibrain/CURRENT.md` from recent git activity. It does not call any cloud model or external API.
 
 ## Current Scope
 

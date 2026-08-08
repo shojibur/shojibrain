@@ -9,6 +9,7 @@ const scan_1 = require("./commands/scan");
 const status_1 = require("./commands/status");
 const sync_1 = require("./commands/sync");
 const watch_1 = require("./commands/watch");
+const checkpoint_1 = require("./commands/checkpoint");
 const index_1 = require("./presets/index");
 const constants_1 = require("./project/constants");
 const program = new commander_1.Command();
@@ -143,6 +144,33 @@ program
     .description("Watch for file changes and automatically sync ShojiBrain")
     .action(async () => {
     await (0, watch_1.runWatch)(process.cwd());
+});
+program
+    .command("checkpoint")
+    .description("Update CURRENT.md from local git activity")
+    .option("--since <ref>", "Git date/ref boundary, for example '7 days ago'")
+    .option("--dry-run", "Print the proposed CURRENT.md without writing it")
+    .action(async (options) => {
+    const checkpointOptions = {
+        ...(options.since === undefined ? {} : { since: options.since }),
+        ...(options.dryRun === undefined ? {} : { dryRun: options.dryRun }),
+    };
+    const result = await (0, checkpoint_1.runCheckpoint)(process.cwd(), checkpointOptions);
+    if (result.dryRun) {
+        printLines([
+            `${constants_1.TOOL_NAME} Checkpoint (dry run)`,
+            "",
+            result.proposed,
+        ]);
+        return;
+    }
+    printLines([
+        `${constants_1.TOOL_NAME} Checkpoint`,
+        "",
+        result.written ? "CURRENT.md updated." : "CURRENT.md already matched the generated checkpoint.",
+        `Commits analysed: ${result.commitCount}`,
+        `Files considered: ${result.fileCount}`,
+    ]);
 });
 program.parseAsync(process.argv).catch((error) => {
     const message = error instanceof Error ? error.message : "Unknown error";

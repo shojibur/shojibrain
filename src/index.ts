@@ -7,6 +7,7 @@ import { runScan } from "./commands/scan";
 import { runStatus } from "./commands/status";
 import { runSync } from "./commands/sync";
 import { runWatch } from "./commands/watch";
+import { runCheckpoint } from "./commands/checkpoint";
 import { listPresetDefinitions } from "./presets/index";
 import { TOOL_NAME } from "./project/constants";
 
@@ -151,6 +152,35 @@ program
   .description("Watch for file changes and automatically sync ShojiBrain")
   .action(async () => {
     await runWatch(process.cwd());
+  });
+
+program
+  .command("checkpoint")
+  .description("Update CURRENT.md from local git activity")
+  .option("--since <ref>", "Git date/ref boundary, for example '7 days ago'")
+  .option("--dry-run", "Print the proposed CURRENT.md without writing it")
+  .action(async (options: { since?: string; dryRun?: boolean }) => {
+    const checkpointOptions = {
+      ...(options.since === undefined ? {} : { since: options.since }),
+      ...(options.dryRun === undefined ? {} : { dryRun: options.dryRun }),
+    };
+    const result = await runCheckpoint(process.cwd(), checkpointOptions);
+    if (result.dryRun) {
+      printLines([
+        `${TOOL_NAME} Checkpoint (dry run)`,
+        "",
+        result.proposed,
+      ]);
+      return;
+    }
+
+    printLines([
+      `${TOOL_NAME} Checkpoint`,
+      "",
+      result.written ? "CURRENT.md updated." : "CURRENT.md already matched the generated checkpoint.",
+      `Commits analysed: ${result.commitCount}`,
+      `Files considered: ${result.fileCount}`,
+    ]);
   });
 
 program.parseAsync(process.argv).catch((error: unknown) => {
