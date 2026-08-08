@@ -27,13 +27,23 @@ It is currently strongest on JavaScript and TypeScript repositories.
 npm install -g git+https://github.com/shojibur/shojibrain.git
 ```
 
-If you use Volta and the `git+https` install ends with a Volta manifest error, use the tarball flow instead:
+If you use Volta, `git+https` global installs may still fail after npm finishes due to a Volta manifest issue. In that case, use the tarball flow instead:
 
 ```bash
 git clone https://github.com/shojibur/shojibrain.git
 cd shojibrain
+npm install
+npm run build
 npm pack
 npm install -g ./shojibrain-1.0.0.tgz
+```
+
+### From npm
+
+This is the intended long-term install path once the package is published:
+
+```bash
+npm install -g shojibrain
 ```
 
 ### Local development
@@ -187,6 +197,20 @@ Current built-in presets:
 
 Preset guidance is applied automatically when ShojiBrain creates new docs. Existing docs are preserved, so rerunning `init` updates `project.config.json` but does not rewrite your manual documentation.
 
+## Supported Project Types
+
+ShojiBrain currently has built-in presets and strongest support for:
+
+- Laravel
+- React Native
+- Next.js
+- Node API / backend services
+- WordPress plugins
+- WordPress themes
+- Design systems
+
+The scanner is strongest on JavaScript and TypeScript, and now also provides lighter support for Python, PHP, Ruby, and Go repositories.
+
 ## What To Commit In Your Real Project
 
 Commit these:
@@ -242,6 +266,10 @@ Current behavior in V0.1:
 - rescans the repository
 - updates files, symbols, dependencies, and tests
 
+### `shojibrain watch`
+
+Watches relevant source files plus ShojiBrain docs/config and automatically refreshes the generated maps after changes.
+
 ## Current Scope
 
 Implemented and usable now:
@@ -276,3 +304,15 @@ npm install
 npm run check
 npm run build
 ```
+
+## Publish Notes
+
+Before publishing to npm:
+
+```bash
+npm run check
+npm run build
+npm publish
+```
+
+The `prepublishOnly` script already runs `check` and `build` as a safety gate.
