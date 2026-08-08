@@ -9,6 +9,8 @@ import {
   RequestedPreset,
   resolvePresetConfigEntries,
 } from "../presets/index";
+import { scanProject } from "../scanner/scan";
+import { writeScanResult } from "../storage/io";
 import { writeProjectConfig } from "../storage/project-config";
 import {
   buildArchitectureTemplate,
@@ -28,8 +30,19 @@ import {
 
 export async function runInit(
   startDir: string,
-  options: { presets?: string[]; interactive?: boolean } = {},
-): Promise<{ rootDir: string; created: string[]; updated: string[]; presets: string[] }> {
+  options: { presets?: string[]; interactive?: boolean; scan?: boolean } = {},
+): Promise<{
+  rootDir: string;
+  created: string[];
+  updated: string[];
+  presets: string[];
+  scan: null | {
+    fileCount: number;
+    symbolCount: number;
+    dependencyCount: number;
+    testCount: number;
+  };
+}> {
   const rootDir = await findProjectRoot(startDir);
   await ensureBrainDirectories(rootDir);
   const requestedPresets = await resolveRequestedPresets(options.presets ?? [], options.interactive ?? true);
@@ -61,11 +74,30 @@ export async function runInit(
   if (agentsResult === "created") created.push("AGENTS.md");
   if (agentsResult === "updated") updated.push("AGENTS.md");
 
+  let scan: null | {
+    fileCount: number;
+    symbolCount: number;
+    dependencyCount: number;
+    testCount: number;
+  } = null;
+
+  if (options.scan !== false) {
+    const result = await scanProject(rootDir);
+    await writeScanResult(rootDir, result);
+    scan = {
+      fileCount: Object.keys(result.files).length,
+      symbolCount: Object.keys(result.symbols).length,
+      dependencyCount: Object.values(result.dependencies).reduce((count, entry) => count + entry.dependsOn.length, 0),
+      testCount: Object.keys(result.tests).length,
+    };
+  }
+
   return {
     rootDir,
     created,
     updated,
     presets: presetEntries.map((preset) => `${preset.id}:${preset.scope}`),
+    scan,
   };
 }
 

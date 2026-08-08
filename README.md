@@ -76,6 +76,8 @@ Initialize ShojiBrain:
 shojibrain init
 ```
 
+By default, `init` also runs the first repository scan so `.shojibrain/map/` is immediately populated.
+
 Initialize with one or more presets:
 
 ```bash
@@ -90,7 +92,13 @@ List available presets:
 shojibrain init --list-presets
 ```
 
-Run the first scan:
+Skip the initial scan only if you want docs/config first:
+
+```bash
+shojibrain init --no-scan
+```
+
+Run the first scan again manually when needed:
 
 ```bash
 shojibrain scan
@@ -150,6 +158,7 @@ It also:
 - adds `.shojibrain-cache/` to `.gitignore`
 - creates or updates `AGENTS.md`
 - stores selected project presets in `.shojibrain/project.config.json`
+- runs an initial repository scan by default
 
 ## What To Fill In After `init`
 

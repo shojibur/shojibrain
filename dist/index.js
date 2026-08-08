@@ -19,6 +19,7 @@ program
     .option("-p, --preset <preset>", "Project preset in the form id or id:scope. Repeat for mixed-stack repos.", collectOption, [])
     .option("--list-presets", "List available project presets")
     .option("--no-interactive", "Skip the preset prompt when no preset is provided")
+    .option("--no-scan", "Skip the initial repository scan")
     .action(async (options) => {
     if (options.listPresets) {
         printLines([
@@ -31,6 +32,7 @@ program
     const initOptions = {
         presets: options.preset ?? [],
         ...(options.interactive === undefined ? {} : { interactive: options.interactive }),
+        ...(options.scan === undefined ? {} : { scan: options.scan }),
     };
     const result = await (0, init_1.runInit)(process.cwd(), initOptions);
     printLines([
@@ -40,6 +42,9 @@ program
         `Presets: ${result.presets.length > 0 ? result.presets.join(", ") : "none"}`,
         result.created.length ? `Created: ${result.created.join(", ")}` : "Created: none",
         result.updated.length ? `Updated: ${result.updated.join(", ")}` : "Updated: none",
+        result.scan
+            ? `Initial scan: ${result.scan.fileCount} files, ${result.scan.symbolCount} symbols, ${result.scan.dependencyCount} dependencies, ${result.scan.testCount} test mappings`
+            : "Initial scan: skipped",
     ]);
 });
 program

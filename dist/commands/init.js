@@ -9,6 +9,8 @@ const promises_1 = __importDefault(require("node:readline/promises"));
 const node_process_1 = require("node:process");
 const constants_1 = require("../project/constants");
 const index_1 = require("../presets/index");
+const scan_1 = require("../scanner/scan");
+const io_1 = require("../storage/io");
 const project_config_1 = require("../storage/project-config");
 const templates_1 = require("../templates");
 const fs_1 = require("../utils/fs");
@@ -51,11 +53,23 @@ async function runInit(startDir, options = {}) {
         created.push("AGENTS.md");
     if (agentsResult === "updated")
         updated.push("AGENTS.md");
+    let scan = null;
+    if (options.scan !== false) {
+        const result = await (0, scan_1.scanProject)(rootDir);
+        await (0, io_1.writeScanResult)(rootDir, result);
+        scan = {
+            fileCount: Object.keys(result.files).length,
+            symbolCount: Object.keys(result.symbols).length,
+            dependencyCount: Object.values(result.dependencies).reduce((count, entry) => count + entry.dependsOn.length, 0),
+            testCount: Object.keys(result.tests).length,
+        };
+    }
     return {
         rootDir,
         created,
         updated,
         presets: presetEntries.map((preset) => `${preset.id}:${preset.scope}`),
+        scan,
     };
 }
 async function resolveRequestedPresets(presetFlags, interactive) {
