@@ -27,6 +27,15 @@ It is currently strongest on JavaScript and TypeScript repositories.
 npm install -g git+https://github.com/shojibur/shojibrain.git
 ```
 
+If you use Volta and the `git+https` install ends with a Volta manifest error, use the tarball flow instead:
+
+```bash
+git clone https://github.com/shojibur/shojibrain.git
+cd shojibrain
+npm pack
+npm install -g ./shojibrain-1.0.0.tgz
+```
+
 ### Local development
 
 ```bash
