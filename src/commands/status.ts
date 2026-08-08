@@ -1,5 +1,6 @@
 import path from "node:path";
 import { DOC_FILES } from "../project/constants";
+import { readProjectConfig } from "../storage/project-config";
 import { getRelevantChangedFiles } from "../git/status";
 import { readScanResult } from "../storage/io";
 import { fileExists, findProjectRoot } from "../utils/fs";
@@ -11,6 +12,7 @@ export async function runStatus(startDir: string) {
     Object.entries(DOC_FILES).map(async ([key, relativePath]) => [key, await fileExists(path.join(rootDir, relativePath))] as const),
   );
   const changedFiles = await getRelevantChangedFiles(rootDir);
+  const projectConfig = await readProjectConfig(rootDir);
 
   let scan = null;
   try {
@@ -23,6 +25,7 @@ export async function runStatus(startDir: string) {
     rootDir,
     initialized,
     docs: Object.fromEntries(docs),
+    presets: projectConfig?.presets ?? [],
     changedFiles,
     project: scan?.project ?? null,
     counts: scan

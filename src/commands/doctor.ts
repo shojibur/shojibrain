@@ -1,6 +1,7 @@
 import path from "node:path";
-import { CACHE_DIR, DOC_FILES, MAP_FILES } from "../project/constants";
+import { CACHE_DIR, DOC_FILES, MAP_FILES, PROJECT_CONFIG_FILE } from "../project/constants";
 import { readScanResult } from "../storage/io";
+import { readProjectConfig } from "../storage/project-config";
 import { fileExists, findProjectRoot } from "../utils/fs";
 
 export async function runDoctor(startDir: string) {
@@ -27,6 +28,12 @@ export async function runDoctor(startDir: string) {
     detail: "The cache directory should be writable for future local indexes.",
   });
 
+  checks.push({
+    name: `${PROJECT_CONFIG_FILE} exists`,
+    ok: await fileExists(path.join(rootDir, PROJECT_CONFIG_FILE)),
+    detail: "Run `shojibrain init` with optional presets to store project-type configuration.",
+  });
+
   for (const relativePath of Object.values(MAP_FILES)) {
     checks.push({
       name: `${relativePath} exists`,
@@ -49,6 +56,13 @@ export async function runDoctor(startDir: string) {
       detail: error instanceof Error ? error.message : "Unable to parse persisted map files.",
     });
   }
+
+  const config = await readProjectConfig(rootDir);
+  checks.push({
+    name: "Project preset config readable",
+    ok: config !== null,
+    detail: config ? `Detected ${config.presets.length} preset(s).` : "Project preset config is missing or unreadable.",
+  });
 
   checks.push({
     name: "AGENTS.md integration exists",

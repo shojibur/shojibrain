@@ -4,6 +4,7 @@ export declare function runStatus(startDir: string): Promise<{
     docs: {
         [k: string]: boolean;
     };
+    presets: import("../types").ProjectPresetConfigEntry[];
     changedFiles: string[];
     project: import("../types").ProjectMap | null;
     counts: {

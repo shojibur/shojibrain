@@ -9,6 +9,7 @@ export const FEATURES_DIR = path.posix.join(BRAIN_DIR, "features");
 export const SPECS_DIR = path.posix.join(BRAIN_DIR, "specs");
 export const DECISIONS_DIR = path.posix.join(BRAIN_DIR, "decisions");
 export const TASKS_DIR = path.posix.join(BRAIN_DIR, "tasks");
+export const PROJECT_CONFIG_FILE = path.posix.join(BRAIN_DIR, "project.config.json");
 export const DOC_FILES = {
   product: path.posix.join(BRAIN_DIR, "PRODUCT.md"),
   architecture: path.posix.join(BRAIN_DIR, "ARCHITECTURE.md"),

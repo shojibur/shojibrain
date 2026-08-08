@@ -1,9 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.promptTemplate = exports.agentsSection = exports.adrTemplate = exports.specTemplate = exports.featureTemplate = exports.currentTemplate = exports.rulesTemplate = exports.architectureTemplate = exports.productTemplate = void 0;
-exports.productTemplate = `# Product
+exports.agentsSection = exports.adrTemplate = exports.specTemplate = exports.featureTemplate = void 0;
+exports.buildProductTemplate = buildProductTemplate;
+exports.buildArchitectureTemplate = buildArchitectureTemplate;
+exports.buildRulesTemplate = buildRulesTemplate;
+exports.buildCurrentTemplate = buildCurrentTemplate;
+exports.buildPromptTemplate = buildPromptTemplate;
+const index_1 = require("../presets/index");
+function buildProductTemplate(presets) {
+    return `# Product
 
 Use this file for human-maintained product truth. Keep it concise, concrete, and current.
+
+## Active Presets
+${(0, index_1.buildPresetSummary)(presets)}
 
 ## Product Name
 [Replace with project name]
@@ -55,10 +65,16 @@ Only include real business constraints, not implementation details.
 ## Future Ideas
 - Possible future direction:
 - Possible future direction:
+${appendPresetSection(presets, "product")}
 `;
-exports.architectureTemplate = `# Architecture
+}
+function buildArchitectureTemplate(presets) {
+    return `# Architecture
 
 Use this file for stable architectural guidance. Update it when system structure or constraints materially change.
+
+## Active Presets
+${(0, index_1.buildPresetSummary)(presets)}
 
 ## Technology Stack
 - Frontend:
@@ -150,10 +166,16 @@ Example:
 - Constraint:
 - Constraint:
 - Constraint:
+${appendPresetSection(presets, "architecture")}
 `;
-exports.rulesTemplate = `# Rules
+}
+function buildRulesTemplate(presets) {
+    return `# Rules
 
 These rules are for coding agents and contributors working in this repository.
+
+## Active Presets
+${(0, index_1.buildPresetSummary)(presets)}
 
 - Understand the request before changing code.
 - Read relevant ShojiBrain documentation before significant implementation.
@@ -190,10 +212,16 @@ After substantial implementation:
 - Keep naming aligned with existing code.
 - Avoid speculative refactors unless the task requires them.
 - Leave clear boundaries between product logic, infrastructure, and UI concerns.
+${appendPresetSection(presets, "rules")}
 `;
-exports.currentTemplate = `# Current Project State
+}
+function buildCurrentTemplate(presets) {
+    return `# Current Project State
 
 Keep this short. It should reflect the current working reality of the project, not a historical archive.
+
+## Active Presets
+${(0, index_1.buildPresetSummary)(presets)}
 
 ## Current Goal
 [What is the team trying to achieve right now?]
@@ -219,7 +247,9 @@ Keep this short. It should reflect the current working reality of the project, n
 
 ## Recent Decisions
 - [Decision worth remembering during current work]
+${appendPresetSection(presets, "current")}
 `;
+}
 exports.featureTemplate = `# Feature: [Name]
 
 ## Purpose
@@ -288,9 +318,13 @@ After significant implementation:
 4. Update \`.shojibrain/CURRENT.md\` when appropriate.
 5. Create an ADR only for meaningful architectural decisions.
 `;
-exports.promptTemplate = `# ShojiBrain Prompt Template
+function buildPromptTemplate(presets) {
+    return `# ShojiBrain Prompt Template
 
 Use this with Codex, Claude, Cursor, Cline, or another coding agent after running ShojiBrain.
+
+## Active Presets
+${(0, index_1.buildPresetSummary)(presets)}
 
 ## Recommended Workflow
 
@@ -325,4 +359,9 @@ ShojiBrain context:
 Use ShojiBrain context for this task first. Follow .shojibrain/RULES.md. Make only the necessary code changes. Run relevant tests. Update ShojiBrain docs if behavior or architecture changed.
 \`\`\`
 `;
+}
+function appendPresetSection(presets, type) {
+    const section = (0, index_1.buildPresetGuidanceSection)(presets, type);
+    return section ? `\n\n${section}` : "";
+}
 //# sourceMappingURL=index.js.map

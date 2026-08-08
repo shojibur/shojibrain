@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.runStatus = runStatus;
 const node_path_1 = __importDefault(require("node:path"));
 const constants_1 = require("../project/constants");
+const project_config_1 = require("../storage/project-config");
 const status_1 = require("../git/status");
 const io_1 = require("../storage/io");
 const fs_1 = require("../utils/fs");
@@ -14,6 +15,7 @@ async function runStatus(startDir) {
     const initialized = await (0, fs_1.fileExists)(node_path_1.default.join(rootDir, ".shojibrain"));
     const docs = await Promise.all(Object.entries(constants_1.DOC_FILES).map(async ([key, relativePath]) => [key, await (0, fs_1.fileExists)(node_path_1.default.join(rootDir, relativePath))]));
     const changedFiles = await (0, status_1.getRelevantChangedFiles)(rootDir);
+    const projectConfig = await (0, project_config_1.readProjectConfig)(rootDir);
     let scan = null;
     try {
         scan = await (0, io_1.readScanResult)(rootDir);
@@ -25,6 +27,7 @@ async function runStatus(startDir) {
         rootDir,
         initialized,
         docs: Object.fromEntries(docs),
+        presets: projectConfig?.presets ?? [],
         changedFiles,
         project: scan?.project ?? null,
         counts: scan

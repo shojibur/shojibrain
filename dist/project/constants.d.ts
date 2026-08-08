@@ -7,6 +7,7 @@ export declare const FEATURES_DIR: string;
 export declare const SPECS_DIR: string;
 export declare const DECISIONS_DIR: string;
 export declare const TASKS_DIR: string;
+export declare const PROJECT_CONFIG_FILE: string;
 export declare const DOC_FILES: {
     readonly product: string;
     readonly architecture: string;

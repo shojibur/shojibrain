@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SOURCE_FILE_PATTERN = exports.TEST_FILE_PATTERN = exports.SUPPORTED_EXTENSIONS = exports.DEFAULT_IGNORES = exports.AGENTS_SECTION_END = exports.AGENTS_SECTION_START = exports.MAP_FILES = exports.DOC_FILES = exports.TASKS_DIR = exports.DECISIONS_DIR = exports.SPECS_DIR = exports.FEATURES_DIR = exports.MAP_DIR = exports.CACHE_DIR = exports.BRAIN_DIR = exports.MAP_SCHEMA_VERSION = exports.TOOL_NAME = void 0;
+exports.SOURCE_FILE_PATTERN = exports.TEST_FILE_PATTERN = exports.SUPPORTED_EXTENSIONS = exports.DEFAULT_IGNORES = exports.AGENTS_SECTION_END = exports.AGENTS_SECTION_START = exports.MAP_FILES = exports.DOC_FILES = exports.PROJECT_CONFIG_FILE = exports.TASKS_DIR = exports.DECISIONS_DIR = exports.SPECS_DIR = exports.FEATURES_DIR = exports.MAP_DIR = exports.CACHE_DIR = exports.BRAIN_DIR = exports.MAP_SCHEMA_VERSION = exports.TOOL_NAME = void 0;
 const node_path_1 = __importDefault(require("node:path"));
 exports.TOOL_NAME = "ShojiBrain";
 exports.MAP_SCHEMA_VERSION = 1;
@@ -14,6 +14,7 @@ exports.FEATURES_DIR = node_path_1.default.posix.join(exports.BRAIN_DIR, "featur
 exports.SPECS_DIR = node_path_1.default.posix.join(exports.BRAIN_DIR, "specs");
 exports.DECISIONS_DIR = node_path_1.default.posix.join(exports.BRAIN_DIR, "decisions");
 exports.TASKS_DIR = node_path_1.default.posix.join(exports.BRAIN_DIR, "tasks");
+exports.PROJECT_CONFIG_FILE = node_path_1.default.posix.join(exports.BRAIN_DIR, "project.config.json");
 exports.DOC_FILES = {
     product: node_path_1.default.posix.join(exports.BRAIN_DIR, "PRODUCT.md"),
     architecture: node_path_1.default.posix.join(exports.BRAIN_DIR, "ARCHITECTURE.md"),

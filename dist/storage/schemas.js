@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.scanResultSchema = exports.testsMapSchema = exports.dependencyEntrySchema = exports.symbolEntrySchema = exports.moduleEntrySchema = exports.fileEntrySchema = exports.projectMapSchema = void 0;
+exports.scanResultSchema = exports.testsMapSchema = exports.dependencyEntrySchema = exports.symbolEntrySchema = exports.moduleEntrySchema = exports.fileEntrySchema = exports.projectConfigSchema = exports.projectPresetConfigEntrySchema = exports.projectMapSchema = void 0;
 const zod_1 = require("zod");
 exports.projectMapSchema = zod_1.z.object({
     schemaVersion: zod_1.z.number().int(),
@@ -11,6 +11,17 @@ exports.projectMapSchema = zod_1.z.object({
     packageManager: zod_1.z.string().nullable(),
     sourceDirectories: zod_1.z.array(zod_1.z.string()),
     testDirectories: zod_1.z.array(zod_1.z.string()),
+});
+exports.projectPresetConfigEntrySchema = zod_1.z.object({
+    id: zod_1.z.string(),
+    label: zod_1.z.string(),
+    scope: zod_1.z.string(),
+    description: zod_1.z.string(),
+});
+exports.projectConfigSchema = zod_1.z.object({
+    schemaVersion: zod_1.z.number().int(),
+    initializedAt: zod_1.z.string(),
+    presets: zod_1.z.array(exports.projectPresetConfigEntrySchema),
 });
 exports.fileEntrySchema = zod_1.z.object({
     language: zod_1.z.string(),

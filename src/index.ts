@@ -6,6 +6,7 @@ import { runInit } from "./commands/init";
 import { runScan } from "./commands/scan";
 import { runStatus } from "./commands/status";
 import { runSync } from "./commands/sync";
+import { listPresetDefinitions } from "./presets/index";
 import { TOOL_NAME } from "./project/constants";
 
 const program = new Command();
@@ -15,12 +16,29 @@ program.name("shojibrain").description(`${TOOL_NAME} local-first project intelli
 program
   .command("init")
   .description("Initialize ShojiBrain in the current project")
-  .action(async () => {
-    const result = await runInit(process.cwd());
+  .option("-p, --preset <preset>", "Project preset in the form id or id:scope. Repeat for mixed-stack repos.", collectOption, [])
+  .option("--list-presets", "List available project presets")
+  .option("--no-interactive", "Skip the preset prompt when no preset is provided")
+  .action(async (options: { preset?: string[]; listPresets?: boolean; interactive?: boolean }) => {
+    if (options.listPresets) {
+      printLines([
+        "Available presets",
+        "",
+        ...listPresetDefinitions().map((preset: { id: string; label: string; description: string }) => `- ${preset.id}: ${preset.label} :: ${preset.description}`),
+      ]);
+      return;
+    }
+
+    const initOptions = {
+      presets: options.preset ?? [],
+      ...(options.interactive === undefined ? {} : { interactive: options.interactive }),
+    };
+    const result = await runInit(process.cwd(), initOptions);
     printLines([
       `${TOOL_NAME} Init`,
       "",
       `Project root: ${result.rootDir}`,
+      `Presets: ${result.presets.length > 0 ? result.presets.join(", ") : "none"}`,
       result.created.length ? `Created: ${result.created.join(", ")}` : "Created: none",
       result.updated.length ? `Updated: ${result.updated.join(", ")}` : "Updated: none",
     ]);
@@ -87,6 +105,8 @@ program
       "Documentation:",
       ...Object.entries(result.docs).map(([name, ok]) => `- ${name}: ${ok ? "present" : "missing"}`),
       "",
+      `Presets: ${result.presets.length > 0 ? result.presets.map((preset) => `${preset.id}:${preset.scope}`).join(", ") : "(none configured)"}`,
+      "",
       `Working tree: ${result.changedFiles.length} relevant changed files`,
     ]);
   });
@@ -132,4 +152,9 @@ function printJson(value: unknown): void {
 
 function printLines(lines: string[]): void {
   console.log(lines.join("\n"));
+}
+
+function collectOption(value: string, previous: string[]): string[] {
+  previous.push(value);
+  return previous;
 }

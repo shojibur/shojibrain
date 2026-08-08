@@ -9,6 +9,19 @@ export interface ProjectMap {
   testDirectories: string[];
 }
 
+export interface ProjectPresetConfigEntry {
+  id: string;
+  label: string;
+  scope: string;
+  description: string;
+}
+
+export interface ProjectConfig {
+  schemaVersion: number;
+  initializedAt: string;
+  presets: ProjectPresetConfigEntry[];
+}
+
 export interface FileEntry {
   language: string;
   module: string | null;

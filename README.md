@@ -66,6 +66,20 @@ Initialize ShojiBrain:
 shojibrain init
 ```
 
+Initialize with one or more presets:
+
+```bash
+shojibrain init --preset laravel
+shojibrain init --preset wordpress-plugin
+shojibrain init --preset laravel:. --preset react-native:mobile
+```
+
+List available presets:
+
+```bash
+shojibrain init --list-presets
+```
+
 Run the first scan:
 
 ```bash
@@ -125,6 +139,7 @@ It also:
 - creates `.shojibrain-cache/`
 - adds `.shojibrain-cache/` to `.gitignore`
 - creates or updates `AGENTS.md`
+- stores selected project presets in `.shojibrain/project.config.json`
 
 ## What To Fill In After `init`
 
@@ -140,6 +155,37 @@ You can also use:
 - `.shojibrain/PROMPT_TEMPLATE.md`
 
 The code maps update from `scan` and `sync`, but product intent, architecture guidance, and current priorities should be updated by you when they change.
+
+## Presets
+
+ShojiBrain can initialize projects with one or more scoped presets so mixed repositories stay simple.
+
+Examples:
+
+- Laravel app at repo root:
+  `shojibrain init --preset laravel`
+- React Native app in a subfolder:
+  `shojibrain init --preset react-native:mobile`
+- Laravel at root and React Native inside `mobile/`:
+  `shojibrain init --preset laravel:. --preset react-native:mobile`
+- WordPress plugin:
+  `shojibrain init --preset wordpress-plugin`
+- WordPress theme:
+  `shojibrain init --preset wordpress-theme`
+- Shared UI library:
+  `shojibrain init --preset design-system`
+
+Current built-in presets:
+
+- `laravel`
+- `react-native`
+- `nextjs`
+- `node-api`
+- `wordpress-plugin`
+- `wordpress-theme`
+- `design-system`
+
+Preset guidance is applied automatically when ShojiBrain creates new docs. Existing docs are preserved, so rerunning `init` updates `project.config.json` but does not rewrite your manual documentation.
 
 ## What To Commit In Your Real Project
 

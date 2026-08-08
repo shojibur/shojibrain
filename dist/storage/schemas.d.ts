@@ -9,6 +9,22 @@ export declare const projectMapSchema: z.ZodObject<{
     sourceDirectories: z.ZodArray<z.ZodString>;
     testDirectories: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
+export declare const projectPresetConfigEntrySchema: z.ZodObject<{
+    id: z.ZodString;
+    label: z.ZodString;
+    scope: z.ZodString;
+    description: z.ZodString;
+}, z.core.$strip>;
+export declare const projectConfigSchema: z.ZodObject<{
+    schemaVersion: z.ZodNumber;
+    initializedAt: z.ZodString;
+    presets: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        label: z.ZodString;
+        scope: z.ZodString;
+        description: z.ZodString;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 export declare const fileEntrySchema: z.ZodObject<{
     language: z.ZodString;
     module: z.ZodNullable<z.ZodString>;

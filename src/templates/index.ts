@@ -1,6 +1,13 @@
-export const productTemplate = `# Product
+import { ProjectPresetConfigEntry } from "../types";
+import { buildPresetGuidanceSection, buildPresetSummary } from "../presets/index";
+
+export function buildProductTemplate(presets: ProjectPresetConfigEntry[]): string {
+  return `# Product
 
 Use this file for human-maintained product truth. Keep it concise, concrete, and current.
+
+## Active Presets
+${buildPresetSummary(presets)}
 
 ## Product Name
 [Replace with project name]
@@ -52,11 +59,17 @@ Only include real business constraints, not implementation details.
 ## Future Ideas
 - Possible future direction:
 - Possible future direction:
+${appendPresetSection(presets, "product")}
 `;
+}
 
-export const architectureTemplate = `# Architecture
+export function buildArchitectureTemplate(presets: ProjectPresetConfigEntry[]): string {
+  return `# Architecture
 
 Use this file for stable architectural guidance. Update it when system structure or constraints materially change.
+
+## Active Presets
+${buildPresetSummary(presets)}
 
 ## Technology Stack
 - Frontend:
@@ -148,11 +161,17 @@ Example:
 - Constraint:
 - Constraint:
 - Constraint:
+${appendPresetSection(presets, "architecture")}
 `;
+}
 
-export const rulesTemplate = `# Rules
+export function buildRulesTemplate(presets: ProjectPresetConfigEntry[]): string {
+  return `# Rules
 
 These rules are for coding agents and contributors working in this repository.
+
+## Active Presets
+${buildPresetSummary(presets)}
 
 - Understand the request before changing code.
 - Read relevant ShojiBrain documentation before significant implementation.
@@ -189,11 +208,17 @@ After substantial implementation:
 - Keep naming aligned with existing code.
 - Avoid speculative refactors unless the task requires them.
 - Leave clear boundaries between product logic, infrastructure, and UI concerns.
+${appendPresetSection(presets, "rules")}
 `;
+}
 
-export const currentTemplate = `# Current Project State
+export function buildCurrentTemplate(presets: ProjectPresetConfigEntry[]): string {
+  return `# Current Project State
 
 Keep this short. It should reflect the current working reality of the project, not a historical archive.
+
+## Active Presets
+${buildPresetSummary(presets)}
 
 ## Current Goal
 [What is the team trying to achieve right now?]
@@ -219,7 +244,9 @@ Keep this short. It should reflect the current working reality of the project, n
 
 ## Recent Decisions
 - [Decision worth remembering during current work]
+${appendPresetSection(presets, "current")}
 `;
+}
 
 export const featureTemplate = `# Feature: [Name]
 
@@ -293,9 +320,13 @@ After significant implementation:
 5. Create an ADR only for meaningful architectural decisions.
 `;
 
-export const promptTemplate = `# ShojiBrain Prompt Template
+export function buildPromptTemplate(presets: ProjectPresetConfigEntry[]): string {
+  return `# ShojiBrain Prompt Template
 
 Use this with Codex, Claude, Cursor, Cline, or another coding agent after running ShojiBrain.
+
+## Active Presets
+${buildPresetSummary(presets)}
 
 ## Recommended Workflow
 
@@ -330,3 +361,12 @@ ShojiBrain context:
 Use ShojiBrain context for this task first. Follow .shojibrain/RULES.md. Make only the necessary code changes. Run relevant tests. Update ShojiBrain docs if behavior or architecture changed.
 \`\`\`
 `;
+}
+
+function appendPresetSection(
+  presets: ProjectPresetConfigEntry[],
+  type: "product" | "architecture" | "rules" | "current",
+): string {
+  const section = buildPresetGuidanceSection(presets, type);
+  return section ? `\n\n${section}` : "";
+}

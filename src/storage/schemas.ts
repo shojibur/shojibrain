@@ -11,6 +11,19 @@ export const projectMapSchema = z.object({
   testDirectories: z.array(z.string()),
 });
 
+export const projectPresetConfigEntrySchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  scope: z.string(),
+  description: z.string(),
+});
+
+export const projectConfigSchema = z.object({
+  schemaVersion: z.number().int(),
+  initializedAt: z.string(),
+  presets: z.array(projectPresetConfigEntrySchema),
+});
+
 export const fileEntrySchema = z.object({
   language: z.string(),
   module: z.string().nullable(),
