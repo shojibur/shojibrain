@@ -45,29 +45,27 @@ const t = __importStar(require("@babel/types"));
 const fast_glob_1 = __importDefault(require("fast-glob"));
 const constants_1 = require("../project/constants");
 const fs_1 = require("../utils/fs");
+const lang_1 = require("./lang");
 const MAX_FILE_SIZE_BYTES = 512 * 1024;
 async function scanProject(rootDir) {
     const ignore = await (0, fs_1.getGitignorePatterns)(rootDir);
-    const files = await (0, fast_glob_1.default)(constants_1.SOURCE_FILE_PATTERN, {
-        cwd: rootDir,
-        onlyFiles: true,
-        dot: false,
-        ignore,
-    });
-    const relevantFiles = files
-        .filter((file) => constants_1.SUPPORTED_EXTENSIONS.has(node_path_1.default.extname(file)))
-        .sort();
+    const [jsFiles, langFiles] = await Promise.all([
+        (0, fast_glob_1.default)(constants_1.SOURCE_FILE_PATTERN, { cwd: rootDir, onlyFiles: true, dot: false, ignore }),
+        (0, fast_glob_1.default)(lang_1.LANG_GLOB_PATTERN, { cwd: rootDir, onlyFiles: true, dot: false, ignore }),
+    ]);
+    const relevantJsFiles = jsFiles.filter((file) => constants_1.SUPPORTED_EXTENSIONS.has(node_path_1.default.extname(file))).sort();
+    const relevantLangFiles = langFiles.filter((file) => lang_1.LANG_EXTENSIONS.has(node_path_1.default.extname(file).toLowerCase())).sort();
     const fileMap = {};
     const dependencyMap = new Map();
     const symbolMap = {};
-    for (const relativeFile of relevantFiles) {
+    // ── JS / TS files (AST-based) ─────────────────────────────────────────────
+    for (const relativeFile of relevantJsFiles) {
         const absolutePath = node_path_1.default.join(rootDir, relativeFile);
         const stat = await promises_1.default.stat(absolutePath);
-        if (stat.size > MAX_FILE_SIZE_BYTES) {
+        if (stat.size > MAX_FILE_SIZE_BYTES)
             continue;
-        }
         const content = await promises_1.default.readFile(absolutePath, "utf8");
-        const analysis = analyzeFile(relativeFile, content, relevantFiles, symbolMap);
+        const analysis = analyzeFile(relativeFile, content, relevantJsFiles, symbolMap);
         dependencyMap.set(toPosix(relativeFile), new Set(analysis.resolvedImports));
         fileMap[toPosix(relativeFile)] = {
             language: languageForFile(relativeFile),
@@ -77,6 +75,29 @@ async function scanProject(rootDir) {
             isTest: isTestFile(relativeFile),
             size: stat.size,
         };
+    }
+    // ── Python / PHP / Ruby / Go files (regex-based) ──────────────────────────
+    for (const relativeFile of relevantLangFiles) {
+        const absolutePath = node_path_1.default.join(rootDir, relativeFile);
+        const stat = await promises_1.default.stat(absolutePath);
+        if (stat.size > MAX_FILE_SIZE_BYTES)
+            continue;
+        try {
+            const analysis = await (0, lang_1.analyzeNonJsFile)(relativeFile, rootDir);
+            Object.assign(symbolMap, analysis.symbols);
+            dependencyMap.set(toPosix(relativeFile), new Set());
+            fileMap[toPosix(relativeFile)] = {
+                language: (0, lang_1.languageForExt)(node_path_1.default.extname(relativeFile)),
+                module: inferModuleName(relativeFile),
+                imports: analysis.imports.sort(),
+                exports: analysis.exports.sort(),
+                isTest: (0, lang_1.isTestFileLang)(relativeFile),
+                size: stat.size,
+            };
+        }
+        catch {
+            // skip unreadable files
+        }
     }
     const dependencies = buildDependencies(fileMap, dependencyMap);
     const modules = buildModules(fileMap, dependencies);
@@ -119,6 +140,8 @@ async function buildProjectMap(rootDir, files) {
     catch {
         packageManager = detectPackageManager(rootDir);
     }
+    // Detect non-JS ecosystems from lock files / config files
+    await detectNonJsFrameworks(rootDir, frameworks);
     const directories = Object.keys(files).map((file) => file.split("/")[0] ?? ".");
     const sourceDirectories = uniqueSorted(directories.filter((value) => !value.toLowerCase().includes("test")));
     const testDirectories = uniqueSorted(Object.entries(files)
@@ -387,6 +410,66 @@ function parserPluginsForFile(relativeFile) {
         plugins.push("typescript");
     }
     return plugins;
+}
+async function detectNonJsFrameworks(rootDir, frameworks) {
+    const fsSync = require("node:fs");
+    const exists = (file) => fsSync.existsSync(node_path_1.default.join(rootDir, file));
+    // Python
+    if (exists("requirements.txt") || exists("pyproject.toml") || exists("setup.py")) {
+        frameworks.add("python");
+        try {
+            const reqs = await promises_1.default.readFile(node_path_1.default.join(rootDir, "requirements.txt"), "utf8").catch(() => promises_1.default.readFile(node_path_1.default.join(rootDir, "pyproject.toml"), "utf8").catch(() => ""));
+            if (/django/i.test(reqs))
+                frameworks.add("django");
+            if (/flask/i.test(reqs))
+                frameworks.add("flask");
+            if (/fastapi/i.test(reqs))
+                frameworks.add("fastapi");
+        }
+        catch { /* no-op */ }
+    }
+    // PHP / Laravel
+    if (exists("composer.json")) {
+        frameworks.add("php");
+        try {
+            const composer = JSON.parse(await promises_1.default.readFile(node_path_1.default.join(rootDir, "composer.json"), "utf8"));
+            if (composer.require?.["laravel/framework"])
+                frameworks.add("laravel");
+            if (composer.require?.["symfony/symfony"] || composer.require?.["symfony/framework-bundle"])
+                frameworks.add("symfony");
+            if (composer.require?.["wordpress/wordpress"] || exists("wp-config.php"))
+                frameworks.add("wordpress");
+        }
+        catch { /* no-op */ }
+    }
+    if (exists("wp-config.php") || exists("wp-config-sample.php")) {
+        frameworks.add("php");
+        frameworks.add("wordpress");
+    }
+    // Go
+    if (exists("go.mod")) {
+        frameworks.add("go");
+        try {
+            const goMod = await promises_1.default.readFile(node_path_1.default.join(rootDir, "go.mod"), "utf8");
+            if (/gin-gonic\/gin/.test(goMod))
+                frameworks.add("gin");
+            if (/labstack\/echo/.test(goMod))
+                frameworks.add("echo");
+        }
+        catch { /* no-op */ }
+    }
+    // Ruby / Rails
+    if (exists("Gemfile")) {
+        frameworks.add("ruby");
+        try {
+            const gemfile = await promises_1.default.readFile(node_path_1.default.join(rootDir, "Gemfile"), "utf8");
+            if (/gem\s+["']rails["']/i.test(gemfile))
+                frameworks.add("rails");
+            if (/gem\s+["']sinatra["']/i.test(gemfile))
+                frameworks.add("sinatra");
+        }
+        catch { /* no-op */ }
+    }
 }
 function detectPackageManager(rootDir, declared) {
     if (declared) {

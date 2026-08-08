@@ -6,6 +6,7 @@ import { runInit } from "./commands/init";
 import { runScan } from "./commands/scan";
 import { runStatus } from "./commands/status";
 import { runSync } from "./commands/sync";
+import { runWatch } from "./commands/watch";
 import { listPresetDefinitions } from "./presets/index";
 import { TOOL_NAME } from "./project/constants";
 
@@ -138,6 +139,13 @@ program
       return;
     }
     printLines([result.text]);
+  });
+
+program
+  .command("watch")
+  .description("Watch for file changes and automatically sync ShojiBrain")
+  .action(async () => {
+    await runWatch(process.cwd());
   });
 
 program.parseAsync(process.argv).catch((error: unknown) => {

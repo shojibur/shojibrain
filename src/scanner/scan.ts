@@ -7,35 +7,33 @@ import fg from "fast-glob";
 import { MAP_SCHEMA_VERSION, SOURCE_FILE_PATTERN, SUPPORTED_EXTENSIONS } from "../project/constants";
 import { ScanResult, SymbolEntry } from "../types";
 import { getGitignorePatterns } from "../utils/fs";
+import { analyzeNonJsFile, isTestFileLang, LANG_EXTENSIONS, LANG_GLOB_PATTERN, languageForExt } from "./lang";
 
 const MAX_FILE_SIZE_BYTES = 512 * 1024;
 
 export async function scanProject(rootDir: string): Promise<ScanResult> {
   const ignore = await getGitignorePatterns(rootDir);
-  const files = await fg(SOURCE_FILE_PATTERN, {
-    cwd: rootDir,
-    onlyFiles: true,
-    dot: false,
-    ignore,
-  });
 
-  const relevantFiles = files
-    .filter((file) => SUPPORTED_EXTENSIONS.has(path.extname(file)))
-    .sort();
+  const [jsFiles, langFiles] = await Promise.all([
+    fg(SOURCE_FILE_PATTERN, { cwd: rootDir, onlyFiles: true, dot: false, ignore }),
+    fg(LANG_GLOB_PATTERN, { cwd: rootDir, onlyFiles: true, dot: false, ignore }),
+  ]);
+
+  const relevantJsFiles = jsFiles.filter((file) => SUPPORTED_EXTENSIONS.has(path.extname(file))).sort();
+  const relevantLangFiles = langFiles.filter((file) => LANG_EXTENSIONS.has(path.extname(file).toLowerCase())).sort();
 
   const fileMap: ScanResult["files"] = {};
   const dependencyMap = new Map<string, Set<string>>();
   const symbolMap: ScanResult["symbols"] = {};
 
-  for (const relativeFile of relevantFiles) {
+  // ── JS / TS files (AST-based) ─────────────────────────────────────────────
+  for (const relativeFile of relevantJsFiles) {
     const absolutePath = path.join(rootDir, relativeFile);
     const stat = await fs.stat(absolutePath);
-    if (stat.size > MAX_FILE_SIZE_BYTES) {
-      continue;
-    }
+    if (stat.size > MAX_FILE_SIZE_BYTES) continue;
 
     const content = await fs.readFile(absolutePath, "utf8");
-    const analysis = analyzeFile(relativeFile, content, relevantFiles, symbolMap);
+    const analysis = analyzeFile(relativeFile, content, relevantJsFiles, symbolMap);
 
     dependencyMap.set(toPosix(relativeFile), new Set(analysis.resolvedImports));
     fileMap[toPosix(relativeFile)] = {
@@ -46,6 +44,29 @@ export async function scanProject(rootDir: string): Promise<ScanResult> {
       isTest: isTestFile(relativeFile),
       size: stat.size,
     };
+  }
+
+  // ── Python / PHP / Ruby / Go files (regex-based) ──────────────────────────
+  for (const relativeFile of relevantLangFiles) {
+    const absolutePath = path.join(rootDir, relativeFile);
+    const stat = await fs.stat(absolutePath);
+    if (stat.size > MAX_FILE_SIZE_BYTES) continue;
+
+    try {
+      const analysis = await analyzeNonJsFile(relativeFile, rootDir);
+      Object.assign(symbolMap, analysis.symbols);
+      dependencyMap.set(toPosix(relativeFile), new Set());
+      fileMap[toPosix(relativeFile)] = {
+        language: languageForExt(path.extname(relativeFile)),
+        module: inferModuleName(relativeFile),
+        imports: analysis.imports.sort(),
+        exports: analysis.exports.sort(),
+        isTest: isTestFileLang(relativeFile),
+        size: stat.size,
+      };
+    } catch {
+      // skip unreadable files
+    }
   }
 
   const dependencies = buildDependencies(fileMap, dependencyMap);
@@ -91,6 +112,9 @@ async function buildProjectMap(
   } catch {
     packageManager = detectPackageManager(rootDir);
   }
+
+  // Detect non-JS ecosystems from lock files / config files
+  await detectNonJsFrameworks(rootDir, frameworks);
 
   const directories = Object.keys(files).map((file) => file.split("/")[0] ?? ".");
   const sourceDirectories = uniqueSorted(
@@ -406,6 +430,61 @@ function parserPluginsForFile(relativeFile: string): any[] {
   }
 
   return plugins;
+}
+
+async function detectNonJsFrameworks(rootDir: string, frameworks: Set<string>): Promise<void> {
+  const fsSync = require("node:fs") as typeof import("node:fs");
+  const exists = (file: string) => fsSync.existsSync(path.join(rootDir, file));
+
+  // Python
+  if (exists("requirements.txt") || exists("pyproject.toml") || exists("setup.py")) {
+    frameworks.add("python");
+    try {
+      const reqs = await fs.readFile(path.join(rootDir, "requirements.txt"), "utf8").catch(() =>
+        fs.readFile(path.join(rootDir, "pyproject.toml"), "utf8").catch(() => ""),
+      );
+      if (/django/i.test(reqs)) frameworks.add("django");
+      if (/flask/i.test(reqs)) frameworks.add("flask");
+      if (/fastapi/i.test(reqs)) frameworks.add("fastapi");
+    } catch { /* no-op */ }
+  }
+
+  // PHP / Laravel
+  if (exists("composer.json")) {
+    frameworks.add("php");
+    try {
+      const composer = JSON.parse(await fs.readFile(path.join(rootDir, "composer.json"), "utf8")) as {
+        require?: Record<string, string>;
+      };
+      if (composer.require?.["laravel/framework"]) frameworks.add("laravel");
+      if (composer.require?.["symfony/symfony"] || composer.require?.["symfony/framework-bundle"]) frameworks.add("symfony");
+      if (composer.require?.["wordpress/wordpress"] || exists("wp-config.php")) frameworks.add("wordpress");
+    } catch { /* no-op */ }
+  }
+  if (exists("wp-config.php") || exists("wp-config-sample.php")) {
+    frameworks.add("php");
+    frameworks.add("wordpress");
+  }
+
+  // Go
+  if (exists("go.mod")) {
+    frameworks.add("go");
+    try {
+      const goMod = await fs.readFile(path.join(rootDir, "go.mod"), "utf8");
+      if (/gin-gonic\/gin/.test(goMod)) frameworks.add("gin");
+      if (/labstack\/echo/.test(goMod)) frameworks.add("echo");
+    } catch { /* no-op */ }
+  }
+
+  // Ruby / Rails
+  if (exists("Gemfile")) {
+    frameworks.add("ruby");
+    try {
+      const gemfile = await fs.readFile(path.join(rootDir, "Gemfile"), "utf8");
+      if (/gem\s+["']rails["']/i.test(gemfile)) frameworks.add("rails");
+      if (/gem\s+["']sinatra["']/i.test(gemfile)) frameworks.add("sinatra");
+    } catch { /* no-op */ }
+  }
 }
 
 function detectPackageManager(rootDir: string, declared?: string): string | null {

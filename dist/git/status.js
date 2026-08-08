@@ -27,6 +27,6 @@ async function getRelevantChangedFiles(rootDir) {
     }
 }
 function matchesSourcePattern(file) {
-    return /\.(tsx?|jsx?|mts|cts|mjs|cjs)$/i.test(file);
+    return /\.(tsx?|jsx?|mts|cts|mjs|cjs|py|php|rb|go)$/i.test(file);
 }
 //# sourceMappingURL=status.js.map

@@ -35,7 +35,7 @@ async function rankDocs(rootDir, terms) {
             const content = await promises_1.default.readFile(node_path_1.default.join(rootDir, relativePath), "utf8");
             const sections = splitMarkdownSections(content);
             for (const section of sections) {
-                const score = scoreText(section.heading, terms) * 3 + scoreText(section.body, terms);
+                const score = scoreText(section.heading, terms) * 4 + scoreText(section.body, terms) * 1.5;
                 if (score <= 0)
                     continue;
                 matches.push({
@@ -53,22 +53,35 @@ async function rankDocs(rootDir, terms) {
     return matches.sort((a, b) => b.score - a.score).slice(0, 8);
 }
 function rankFiles(scan, terms) {
+    const testTerms = new Set(["test", "spec", "mock"]);
+    const requestMentionsTests = terms.some((t) => testTerms.has(t));
     return Object.entries(scan.files)
         .map(([file, entry]) => {
-        let score = scoreText(file, terms) * 3;
         const reasons = [];
-        if (score > 0)
+        // path score — each segment tokenised separately so nested paths score better
+        const pathScore = scoreText(file, terms) * 3;
+        if (pathScore > 0)
             reasons.push("filename match");
-        score += scoreText(entry.exports.join(" "), terms) * 4;
-        if (scoreText(entry.exports.join(" "), terms) > 0)
+        // exports: each exported name tokenised through camelCase splitter
+        const exportScore = entry.exports.reduce((sum, name) => sum + scoreText(name, terms) * 5, 0);
+        if (exportScore > 0)
             reasons.push("export match");
-        score += scoreText(entry.module ?? "", terms) * 5;
-        if ((entry.module && scoreText(entry.module, terms) > 0))
+        // module name
+        const moduleScore = scoreText(entry.module ?? "", terms) * 4;
+        if (moduleScore > 0)
             reasons.push("module match");
+        // dependency centrality: files imported by many others are more likely core
+        const usedBy = scan.dependencies[file]?.usedBy.length ?? 0;
+        const centralityBoost = Math.log(1 + usedBy) * 0.5;
+        // related-test linkage
+        let testBoost = 0;
         if (scan.tests[file]?.length) {
-            score += 1;
+            testBoost = 1;
             reasons.push("has related tests");
         }
+        // de-prioritise test files unless query is about tests
+        const testPenalty = entry.isTest && !requestMentionsTests ? 0.4 : 1;
+        const score = (pathScore + exportScore + moduleScore + centralityBoost + testBoost) * testPenalty;
         return { path: file, score, reasons };
     })
         .filter((item) => item.score > 0)
@@ -76,11 +89,15 @@ function rankFiles(scan, terms) {
 }
 function rankSymbols(scan, terms) {
     return Object.entries(scan.symbols)
-        .map(([name, entry]) => ({
-        name,
-        entry,
-        score: scoreText(name, terms) * 4 + scoreText(entry.file, terms),
-    }))
+        .map(([name, entry]) => {
+        const nameScore = scoreText(name, terms) * 5;
+        const fileScore = scoreText(entry.file, terms) * 1.5;
+        const exportBoost = entry.exported ? 1.5 : 1;
+        // class/function/interface are higher signal than const/method
+        const typeBoost = ["class", "function", "interface"].includes(entry.type) ? 1.3 : 1;
+        const score = (nameScore + fileScore) * exportBoost * typeBoost;
+        return { name, entry, score };
+    })
         .filter((item) => item.score > 0)
         .sort((a, b) => b.score - a.score);
 }
@@ -143,11 +160,28 @@ function summarize(content) {
         .slice(0, 280);
 }
 function scoreText(text, terms) {
-    const normalized = text.toLowerCase();
-    return terms.reduce((score, term) => score + (normalized.includes(term) ? 1 : 0), 0);
+    const tokens = tokenize(text);
+    const freq = new Map();
+    for (const t of tokens)
+        freq.set(t, (freq.get(t) ?? 0) + 1);
+    const tf = (term) => (freq.get(term) ?? 0) / Math.max(tokens.length, 1);
+    return terms.reduce((score, term) => {
+        const termTf = tf(term);
+        if (termTf === 0)
+            return score;
+        // IDF-like boost: reward rare terms more than single-letter noise
+        const idfBoost = Math.log(1 + 1 / (termTf + 0.01));
+        return score + termTf * idfBoost;
+    }, 0);
 }
 function tokenize(value) {
-    return Array.from(new Set(value.toLowerCase().split(/[^a-z0-9]+/).filter((part) => part.length >= 2)));
+    // split on non-alphanumeric AND on camelCase / PascalCase boundaries
+    const parts = value
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+        .toLowerCase()
+        .split(/[^a-z0-9]+/);
+    return Array.from(new Set(parts.filter((p) => p.length >= 2)));
 }
 function formatContext(result) {
     const lines = [

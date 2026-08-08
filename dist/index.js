@@ -8,6 +8,7 @@ const init_1 = require("./commands/init");
 const scan_1 = require("./commands/scan");
 const status_1 = require("./commands/status");
 const sync_1 = require("./commands/sync");
+const watch_1 = require("./commands/watch");
 const index_1 = require("./presets/index");
 const constants_1 = require("./project/constants");
 const program = new commander_1.Command();
@@ -131,6 +132,12 @@ program
         return;
     }
     printLines([result.text]);
+});
+program
+    .command("watch")
+    .description("Watch for file changes and automatically sync ShojiBrain")
+    .action(async () => {
+    await (0, watch_1.runWatch)(process.cwd());
 });
 program.parseAsync(process.argv).catch((error) => {
     const message = error instanceof Error ? error.message : "Unknown error";

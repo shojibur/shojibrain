@@ -23,5 +23,5 @@ export async function getRelevantChangedFiles(rootDir: string): Promise<string[]
 }
 
 function matchesSourcePattern(file: string): boolean {
-  return /\.(tsx?|jsx?|mts|cts|mjs|cjs)$/i.test(file);
+  return /\.(tsx?|jsx?|mts|cts|mjs|cjs|py|php|rb|go)$/i.test(file);
 }
