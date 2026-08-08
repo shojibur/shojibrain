@@ -1,5 +1,6 @@
 import path from "node:path";
 import chokidar from "chokidar";
+import { DOC_FILES } from "../project/constants";
 import { scanProject } from "../scanner/scan";
 import { writeScanResult } from "../storage/io";
 import { findProjectRoot } from "../utils/fs";
@@ -7,6 +8,7 @@ import { findProjectRoot } from "../utils/fs";
 const DEBOUNCE_MS = 1200;
 const SOURCE_RE = /\.(tsx?|jsx?|mts|cts|mjs|cjs|py|php|rb|go)$/i;
 const BRAIN_DOC_RE = /^\.shojibrain\/.+\.(md|json)$/i;
+const CURRENT_DOC_PATH = DOC_FILES.current;
 
 export async function runWatch(startDir: string, onEvent?: (msg: string) => void): Promise<void> {
   const rootDir = await findProjectRoot(startDir);
@@ -18,6 +20,7 @@ export async function runWatch(startDir: string, onEvent?: (msg: string) => void
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let pending = false;
   let running = false;
+  let batchChangedFiles = new Set<string>();
 
   const trigger = () => {
     if (running) {
@@ -26,6 +29,8 @@ export async function runWatch(startDir: string, onEvent?: (msg: string) => void
     }
     running = true;
     pending = false;
+    const batchFiles = new Set(batchChangedFiles);
+    batchChangedFiles = new Set<string>();
 
     const start = Date.now();
     log("Scanning…");
@@ -37,6 +42,10 @@ export async function runWatch(startDir: string, onEvent?: (msg: string) => void
           `Synced — ${Object.keys(result.files).length} files, ` +
           `${Object.keys(result.symbols).length} symbols [${elapsed}ms]`,
         );
+        const checkpointHint = buildCheckpointHint(batchFiles);
+        if (checkpointHint) {
+          log(checkpointHint);
+        }
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
@@ -59,6 +68,7 @@ export async function runWatch(startDir: string, onEvent?: (msg: string) => void
     }
     const normalized = rel.split(path.sep).join(path.posix.sep);
     if (!SOURCE_RE.test(filePath) && !BRAIN_DOC_RE.test(normalized)) return;
+    batchChangedFiles.add(normalized);
     log(`  ${event}: ${rel}`);
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(trigger, DEBOUNCE_MS);
@@ -98,4 +108,32 @@ export async function runWatch(startDir: string, onEvent?: (msg: string) => void
       });
     });
   });
+}
+
+function buildCheckpointHint(changedFiles: Set<string>): string | null {
+  const files = Array.from(changedFiles);
+  if (files.length === 0) {
+    return null;
+  }
+
+  const touchedCurrent = files.includes(CURRENT_DOC_PATH);
+  if (touchedCurrent) {
+    return null;
+  }
+
+  const meaningfulFiles = files.filter(isMeaningfulForCurrentState);
+  if (meaningfulFiles.length < 3) {
+    return null;
+  }
+
+  return "Hint: CURRENT.md may be stale after this change set. Run `shojibrain checkpoint --dry-run`.";
+}
+
+function isMeaningfulForCurrentState(file: string): boolean {
+  const lower = file.toLowerCase();
+  if (lower.startsWith(".shojibrain/")) return false;
+  if (lower === "readme.md" || lower === "license" || lower === ".gitignore") return false;
+  if (/^package(-lock)?\.json$/.test(lower)) return false;
+  if (/\.(md|txt|ya?ml|json)$/i.test(lower) && !SOURCE_RE.test(lower)) return false;
+  return true;
 }

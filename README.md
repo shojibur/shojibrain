@@ -286,6 +286,12 @@ Current behavior in V0.1:
 
 Watches relevant source files plus ShojiBrain docs/config and automatically refreshes the generated maps after changes.
 
+When a meaningful batch of source changes lands without a corresponding `CURRENT.md` update, `watch` also suggests:
+
+```bash
+shojibrain checkpoint --dry-run
+```
+
 ### `shojibrain checkpoint`
 
 Generates a deterministic local update for `.shojibrain/CURRENT.md` from recent git activity. It does not call any cloud model or external API.
