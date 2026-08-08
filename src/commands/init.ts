@@ -3,6 +3,7 @@ import { DECISIONS_DIR, DOC_FILES, FEATURES_DIR, SPECS_DIR } from "../project/co
 import {
   architectureTemplate,
   currentTemplate,
+  promptTemplate,
   productTemplate,
   rulesTemplate,
 } from "../templates";
@@ -25,6 +26,7 @@ export async function runInit(startDir: string): Promise<{ rootDir: string; crea
   if (await writeFileIfMissing(path.join(rootDir, DOC_FILES.architecture), architectureTemplate)) created.push(DOC_FILES.architecture);
   if (await writeFileIfMissing(path.join(rootDir, DOC_FILES.rules), rulesTemplate)) created.push(DOC_FILES.rules);
   if (await writeFileIfMissing(path.join(rootDir, DOC_FILES.current), currentTemplate)) created.push(DOC_FILES.current);
+  if (await writeFileIfMissing(path.join(rootDir, DOC_FILES.promptTemplate), promptTemplate)) created.push(DOC_FILES.promptTemplate);
   if (await writeFileIfMissing(path.join(rootDir, FEATURES_DIR, "README.md"), "# Features\n")) created.push(path.posix.join(FEATURES_DIR, "README.md"));
   if (await writeFileIfMissing(path.join(rootDir, SPECS_DIR, "README.md"), "# Specifications\n")) created.push(path.posix.join(SPECS_DIR, "README.md"));
   if (await writeFileIfMissing(path.join(rootDir, DECISIONS_DIR, "README.md"), "# Decisions\n")) created.push(path.posix.join(DECISIONS_DIR, "README.md"));

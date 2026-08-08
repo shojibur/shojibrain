@@ -106,6 +106,7 @@ Inside the target project, ShojiBrain creates:
 ├── ARCHITECTURE.md
 ├── RULES.md
 ├── CURRENT.md
+├── PROMPT_TEMPLATE.md
 ├── features/
 ├── specs/
 ├── decisions/
@@ -124,6 +125,21 @@ It also:
 - creates `.shojibrain-cache/`
 - adds `.shojibrain-cache/` to `.gitignore`
 - creates or updates `AGENTS.md`
+
+## What To Fill In After `init`
+
+You should edit these human-maintained files:
+
+- `.shojibrain/PRODUCT.md`
+- `.shojibrain/ARCHITECTURE.md`
+- `.shojibrain/RULES.md`
+- `.shojibrain/CURRENT.md`
+
+You can also use:
+
+- `.shojibrain/PROMPT_TEMPLATE.md`
+
+The code maps update from `scan` and `sync`, but product intent, architecture guidance, and current priorities should be updated by you when they change.
 
 ## What To Commit In Your Real Project
 

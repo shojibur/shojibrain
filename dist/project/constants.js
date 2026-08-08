@@ -19,6 +19,7 @@ exports.DOC_FILES = {
     architecture: node_path_1.default.posix.join(exports.BRAIN_DIR, "ARCHITECTURE.md"),
     rules: node_path_1.default.posix.join(exports.BRAIN_DIR, "RULES.md"),
     current: node_path_1.default.posix.join(exports.BRAIN_DIR, "CURRENT.md"),
+    promptTemplate: node_path_1.default.posix.join(exports.BRAIN_DIR, "PROMPT_TEMPLATE.md"),
 };
 exports.MAP_FILES = {
     project: node_path_1.default.posix.join(exports.MAP_DIR, "project.json"),

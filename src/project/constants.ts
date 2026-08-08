@@ -14,6 +14,7 @@ export const DOC_FILES = {
   architecture: path.posix.join(BRAIN_DIR, "ARCHITECTURE.md"),
   rules: path.posix.join(BRAIN_DIR, "RULES.md"),
   current: path.posix.join(BRAIN_DIR, "CURRENT.md"),
+  promptTemplate: path.posix.join(BRAIN_DIR, "PROMPT_TEMPLATE.md"),
 } as const;
 
 export const MAP_FILES = {

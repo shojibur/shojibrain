@@ -12,6 +12,7 @@ export declare const DOC_FILES: {
     readonly architecture: string;
     readonly rules: string;
     readonly current: string;
+    readonly promptTemplate: string;
 };
 export declare const MAP_FILES: {
     readonly project: string;

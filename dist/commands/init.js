@@ -21,6 +21,8 @@ async function runInit(startDir) {
         created.push(constants_1.DOC_FILES.rules);
     if (await (0, fs_1.writeFileIfMissing)(node_path_1.default.join(rootDir, constants_1.DOC_FILES.current), templates_1.currentTemplate))
         created.push(constants_1.DOC_FILES.current);
+    if (await (0, fs_1.writeFileIfMissing)(node_path_1.default.join(rootDir, constants_1.DOC_FILES.promptTemplate), templates_1.promptTemplate))
+        created.push(constants_1.DOC_FILES.promptTemplate);
     if (await (0, fs_1.writeFileIfMissing)(node_path_1.default.join(rootDir, constants_1.FEATURES_DIR, "README.md"), "# Features\n"))
         created.push(node_path_1.default.posix.join(constants_1.FEATURES_DIR, "README.md"));
     if (await (0, fs_1.writeFileIfMissing)(node_path_1.default.join(rootDir, constants_1.SPECS_DIR, "README.md"), "# Specifications\n"))
